@@ -1,0 +1,6 @@
+{
+  "name": "스마트 교사 호출 시스템",
+  "description": "교무실 입구에서 선생님을 음성으로 호출하는 태블릿용 시스템입니다.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

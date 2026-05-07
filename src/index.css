@@ -1,0 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", serif;
+}
+
+body {
+  background-color: #FAF8F5; /* Editorial Beige */
+  color: #2C2C2C;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* 스크롤바 숨기기 (키오스크 환경용) */
+::-webkit-scrollbar {
+  display: none;
+}

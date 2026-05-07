@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스마트 교사 호출 시스템</title>
+    <!-- Tailwind CSS (V4 버전용 CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 구글 폰트 (Inter / Playfair Display / Noto Sans KR) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* 테마 설정 및 기본 스타일 */
+        :root {
+            --font-sans: 'Inter', 'Noto Sans KR', sans-serif;
+            --font-serif: 'Playfair Display', serif;
+        }
+
+        body {
+            background-color: #FAF8F5; /* 에디토리얼 베이지 */
+            color: #2C2C2C;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-sans);
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .font-serif { font-family: var(--font-serif); }
+
+        /* 스크롤바 숨기기 */
+        ::-webkit-scrollbar { display: none; }
+
+        /* 애니메이션 효과 */
+        .toast-active {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+        }
+        
+        .fade-transition {
+            transition: all 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="h-screen w-full flex flex-col overflow-hidden">
+        
+        <!-- 헤더 섹션 -->
+        <header class="h-32 px-8 md:px-12 flex items-center justify-between border-b border-[#2C2C2C]/10 shrink-0">
+            <div class="flex flex-col">
+                <span class="text-[11px] uppercase tracking-[0.2em] font-bold text-[#A5A58D]">Smart Call System</span>
+                <h1 class="text-3xl md:text-4xl font-serif italic tracking-tight text-[#4A4A3C]">교사 호출 시스템</h1>
+            </div>
+            <div class="text-right hidden sm:block">
+                <div id="clock" class="text-2xl font-light tabular-nums text-[#6B705C]">00:00</div>
+                <div class="text-[11px] uppercase tracking-wider text-[#A5A58D]">Sejong Elementary School</div>
+            </div>
+        </header>
+
+        <!-- 메인 콘텐츠 (선생님 그리드) -->
+        <main class="flex-1 p-8 md:p-12 bg-[#F2EDE7] overflow-y-auto">
+            <div id="teacher-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 h-fit max-w-7xl mx-auto">
+                <!-- 자바스크립트로 버튼 자동 생성 예정 -->
+            </div>
+        </main>
+
+        <!-- 푸터 및 알림바 -->
+        <footer class="h-24 px-8 md:px-12 flex items-center justify-center bg-white border-t border-[#2C2C2C]/10 shrink-0 relative">
+            <!-- 기본 안내 메시지 -->
+            <p id="footer-guide" class="text-sm text-[#A5A58D] font-medium tracking-wide uppercase text-center fade-transition">
+                성함을 터치하면 해당 선생님께 알림이 전송됩니다
+            </p>
+            
+            <!-- 호출 알림 토스트 (초기 숨김) -->
+            <div id="status-bar" class="absolute inset-0 flex items-center justify-center bg-white opacity-0 transform translate-y-4 pointer-events-none fade-transition">
+                <div class="flex items-center gap-3">
+                    <div class="w-3 h-3 bg-[#E76F51] rounded-full animate-pulse"></div>
+                    <p class="text-lg font-medium text-[#4A4A3C]">
+                        <span id="called-name" class="font-bold"></span> 선생님을 호출 중입니다...
+                    </p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // 1. 선생님 명단 데이터
+        const initialTeachers = [
+            "김철수", "이영희", "박지민", "최유정", "정우성",
+            "한소희", "강하늘", "유재석", "신민아", "조세호",
+            "이광수", "송지효", "김종국", "하동훈", "양세찬",
+            "전소민", "지석진", "김희철", "민경훈", "이상민"
+        ];
+
+        // 2. 에디토리얼 컬러 팔레트
+        const gridColors = [
+            '#E9EDC9', '#FEFAE0', '#FAEDCD', 'rgba(212, 163, 115, 0.2)', 
+            '#E0E2EE', '#F3E9FD', '#E7F3EF', '#FDE9E9'
+        ];
+
+        // 3. 변수 및 DOM 요소 초기화
+        const teacherGrid = document.getElementById('teacher-grid');
+        const statusBar = document.getElementById('status-bar');
+        const footerGuide = document.getElementById('footer-guide');
+        const calledNameSpan = document.getElementById('called-name');
+        const clockElement = document.getElementById('clock');
+        let isCalling = false;
+
+        // 4. 가나다 순 정렬 및 버튼 생성
+        function initGrid() {
+            const sorted = [...initialTeachers].sort((a, b) => a.localeCompare(b, 'ko'));
+            
+            sorted.forEach((name, index) => {
+                const button = document.createElement('button');
+                button.className = `h-32 border border-[#2C2C2C]/5 rounded-xl flex flex-col items-center justify-center transition-all active:scale-95 hover:border-[#2C2C2C]/20 shadow-sm`;
+                button.style.backgroundColor = gridColors[index % gridColors.length];
+                
+                button.innerHTML = `
+                    <span class="text-[10px] uppercase tracking-widest text-[#2C2C2C]/40 mb-1">Teacher</span>
+                    <span class="text-xl md:text-2xl font-bold tracking-tight text-[#2C2C2C]">${name}</span>
+                `;
+                
+                button.onclick = () => callTeacher(name);
+                teacherGrid.appendChild(button);
+            });
+        }
+
+        // 5. 시계 업데이트 함수
+        function updateTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            clockElement.textContent = `${hours}:${minutes}`;
+        }
+
+        // 6. 음성 호출(TTS) 및 시각적 피드백 로직
+        function callTeacher(name) {
+            if (isCalling) return;
+            isCalling = true;
+
+            // 음성 출력 (Web Speech API)
+            const message = `${name} 선생님! 학생 호출이 있습니다.`;
+            const utterance = new SpeechSynthesisUtterance(message);
+            utterance.lang = 'ko-KR';
+            window.speechSynthesis.speak(utterance);
+
+            // UI 피드백 (푸터 전환)
+            calledNameSpan.textContent = name;
+            footerGuide.classList.add('opacity-0');
+            
+            setTimeout(() => {
+                statusBar.classList.add('toast-active');
+            }, 100);
+
+            // 3초 후 원상복구
+            setTimeout(() => {
+                statusBar.classList.remove('toast-active');
+                setTimeout(() => {
+                    footerGuide.classList.remove('opacity-0');
+                    isCalling = false;
+                }, 300);
+            }, 3000);
+        }
+
+        // 초기 실행
+        initGrid();
+        updateTime();
+        setInterval(updateTime, 1000);
+    </script>
+</body>
+</html>
