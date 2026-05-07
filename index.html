@@ -83,13 +83,9 @@
     </div>
 
     <script>
-        // 1. 선생님 명단 데이터
-        const initialTeachers = [
-            "김철수", "이영희", "박지민", "최유정", "정우성",
-            "한소희", "강하늘", "유재석", "신민아", "조세호",
-            "이광수", "송지효", "김종국", "하동훈", "양세찬",
-            "전소민", "지석진", "김희철", "민경훈", "이상민"
-        ];
+        // 1. 구글 시트 연동 정보
+        const SHEET_ID = '190cAQgev3IJPDtwIyFgXf8cucxeoWawTpIAq-FMnxwo';
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
 
         // 2. 에디토리얼 컬러 팔레트
         const gridColors = [
@@ -105,11 +101,38 @@
         const clockElement = document.getElementById('clock');
         let isCalling = false;
 
-        // 4. 가나다 순 정렬 및 버튼 생성
-        function initGrid() {
-            const sorted = [...initialTeachers].sort((a, b) => a.localeCompare(b, 'ko'));
+        // 4. 구글 시트에서 데이터 가져오기
+        async function fetchTeachers() {
+            try {
+                // 그리드 초기화 (로딩 표시 대신 비움)
+                teacherGrid.innerHTML = '<div class="col-span-full text-center py-10 text-[#A5A58D]">선생님 명단을 불러오는 중...</div>';
+
+                const response = await fetch(CSV_URL);
+                const data = await response.text();
+                
+                // CSV 파싱 (줄바꿈으로 나누기)
+                const rows = data.split(/\r?\n/);
+                
+                // 첫 번째 행(헤더) 제외하고 데이터 추출 (A2부터)
+                const names = rows.slice(1)
+                    .map(row => row.split(',')[0].trim()) // 첫 번째 열(A열) 가져오기
+                    .filter(name => name.length > 0); // 빈 줄 제거
+
+                // 가나다 순 정렬
+                const sortedNames = names.sort((a, b) => a.localeCompare(b, 'ko'));
+                
+                renderGrid(sortedNames);
+            } catch (error) {
+                console.error('데이터 로드 실패:', error);
+                teacherGrid.innerHTML = '<div class="col-span-full text-center py-10 text-red-400">명단을 불러오지 못했습니다. 시트 권한을 확인해주세요.</div>';
+            }
+        }
+
+        // 5. 그리드 렌더링 함수
+        function renderGrid(names) {
+            teacherGrid.innerHTML = ''; // 로딩 메시지 제거
             
-            sorted.forEach((name, index) => {
+            names.forEach((name, index) => {
                 const button = document.createElement('button');
                 button.className = `h-32 border border-[#2C2C2C]/5 rounded-xl flex flex-col items-center justify-center transition-all active:scale-95 hover:border-[#2C2C2C]/20 shadow-sm`;
                 button.style.backgroundColor = gridColors[index % gridColors.length];
@@ -124,7 +147,7 @@
             });
         }
 
-        // 5. 시계 업데이트 함수
+        // 6. 시계 업데이트 함수
         function updateTime() {
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
@@ -132,18 +155,16 @@
             clockElement.textContent = `${hours}:${minutes}`;
         }
 
-        // 6. 음성 호출(TTS) 및 시각적 피드백 로직
+        // 7. 음성 호출(TTS) 및 시각적 피드백 로직
         function callTeacher(name) {
             if (isCalling) return;
             isCalling = true;
 
-            // 음성 출력 (Web Speech API)
             const message = `${name} 선생님! 학생 호출이 있습니다.`;
             const utterance = new SpeechSynthesisUtterance(message);
             utterance.lang = 'ko-KR';
             window.speechSynthesis.speak(utterance);
 
-            // UI 피드백 (푸터 전환)
             calledNameSpan.textContent = name;
             footerGuide.classList.add('opacity-0');
             
@@ -151,7 +172,6 @@
                 statusBar.classList.add('toast-active');
             }, 100);
 
-            // 3초 후 원상복구
             setTimeout(() => {
                 statusBar.classList.remove('toast-active');
                 setTimeout(() => {
@@ -162,7 +182,7 @@
         }
 
         // 초기 실행
-        initGrid();
+        fetchTeachers();
         updateTime();
         setInterval(updateTime, 1000);
     </script>

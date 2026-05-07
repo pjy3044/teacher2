@@ -6,13 +6,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
-// [선생님 명단]
-const initialTeachers = [
-  "김철수", "이영희", "박지민", "최유정", "정우성",
-  "한소희", "강하늘", "유재석", "신민아", "조세호",
-  "이광수", "송지효", "김종국", "하동훈", "양세찬",
-  "전소민", "지석진", "김희철", "민경훈", "이상민"
-];
+// 구글 시트 연동 정보
+const SHEET_ID = '190cAQgev3IJPDtwIyFgXf8cucxeoWawTpIAq-FMnxwo';
+const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
 
 // 에디토리얼 테마용 버튼 배경색 색상표
 const gridColors = [
@@ -24,13 +20,32 @@ export default function App() {
   const [callingTeacher, setCallingTeacher] = useState<string | null>(null);
   const [sortedTeachers, setSortedTeachers] = useState<string[]>([]);
   const [currentTime, setCurrentTime] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // 가나다 순 정렬
-    const sorted = [...initialTeachers].sort((a, b) => a.localeCompare(b, 'ko'));
-    setSortedTeachers(sorted);
+    // 구글 시트 데이터 가져오기
+    const loadTeachers = async () => {
+      try {
+        const response = await fetch(CSV_URL);
+        const data = await response.text();
+        const rows = data.split(/\r?\n/);
+        
+        // 첫 번째 행(헤더) 제외하고 데이터 추출 (A2부터)
+        const names = rows.slice(1)
+          .map(row => row.split(',')[0].trim())
+          .filter(name => name.length > 0);
+        
+        setSortedTeachers(names.sort((a, b) => a.localeCompare(b, 'ko')));
+      } catch (error) {
+        console.error('명단 로드 실패:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // 시계 업데이트 로직
+    loadTeachers();
+
+    // 시계 업데이트
     const updateTime = () => {
       const now = new Date();
       setCurrentTime(now.toLocaleTimeString('ko-KR', { 
@@ -60,7 +75,7 @@ export default function App() {
 
   return (
     <div className="h-screen w-full flex flex-col bg-[#FAF8F5] overflow-hidden select-none">
-      {/* 헤더: 타이포그래피 대비를 통한 세련된 구성 */}
+      {/* 헤더 섹션 */}
       <header className="h-32 px-8 md:px-12 flex items-center justify-between border-b border-[#2C2C2C]/10 shrink-0">
         <div className="flex flex-col">
           <span className="text-[11px] uppercase tracking-[0.2em] font-bold text-[#A5A58D]">
@@ -80,34 +95,38 @@ export default function App() {
         </div>
       </header>
 
-      {/* 메인: 구조화된 그리드 디자인 */}
+      {/* 메인 콘텐츠 영역 */}
       <main className="flex-1 p-8 md:p-12 bg-[#F2EDE7] overflow-y-auto">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 h-fit max-w-7xl mx-auto">
-          {sortedTeachers.map((name, index) => (
-            <motion.button
-              key={name}
-              id={`teacher-btn-${name}`}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => callTeacher(name)}
-              className={`
-                h-32 border border-[#2C2C2C]/5 rounded-xl flex flex-col items-center justify-center 
-                transition-all hover:border-[#2C2C2C]/20 shadow-sm
-                ${gridColors[index % gridColors.length]}
-              `}
-            >
-              <span className="text-[10px] uppercase tracking-widest text-[#2C2C2C]/40 mb-1">
-                Teacher
-              </span>
-              <span className="text-xl md:text-2xl font-bold tracking-tight text-[#2C2C2C]">
-                {name}
-              </span>
-            </motion.button>
-          ))}
-        </div>
+        {loading ? (
+          <div className="h-full flex items-center justify-center text-[#A5A58D]">
+            선생님 명단을 불러오는 중...
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 h-fit max-w-7xl mx-auto">
+            {sortedTeachers.map((name, index) => (
+              <button
+                key={`${name}-${index}`}
+                onClick={() => callTeacher(name)}
+                className={`
+                  h-32 border border-[#2C2C2C]/5 rounded-xl flex flex-col items-center justify-center 
+                  transition-all active:scale-95 hover:border-[#2C2C2C]/20 shadow-sm
+                  ${gridColors[index % gridColors.length]}
+                `}
+              >
+                <span className="text-[10px] uppercase tracking-widest text-[#2C2C2C]/40 mb-1">
+                  Teacher
+                </span>
+                <span className="text-xl md:text-2xl font-bold tracking-tight text-[#2C2C2C]">
+                  {name}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
       </main>
 
-      {/* 푸터 & 호출 알림바 */}
-      <footer className="h-24 px-8 md:px-12 flex items-center justify-center bg-white border-t border-[#2C2C2C]/10 shrink-0">
+      {/* 푸터 및 알림 영역 */}
+      <footer className="h-24 px-8 md:px-12 flex items-center justify-center bg-white border-t border-[#2C2C2C]/10 shrink-0 relative">
         <AnimatePresence mode="wait">
           {!callingTeacher ? (
             <motion.p
@@ -138,4 +157,3 @@ export default function App() {
     </div>
   );
 }
-
